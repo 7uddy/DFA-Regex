@@ -7,5 +7,5 @@ int main()
 	DFA dfa;
 	dfa.ReadDFA("DFAInput.txt");
 	std::cout << dfa;
-	//GNFA gnfa(dfa);
+	GNFA gnfa = dfa.ConvertDFAtoGNFA();
 }

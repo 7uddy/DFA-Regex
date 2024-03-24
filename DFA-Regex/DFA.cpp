@@ -1,7 +1,4 @@
 #include "DFA.h"
-#include <fstream>
-#include <iostream>
-#include "GNFA.h"
 
 DFA::DFA(const std::vector<char>& possibleStates, const std::vector<char>& alphabet, const char& initialState,
 	const std::vector<char>& finalStates, const std::map<char, std::vector<Transition>>& transitions) noexcept
@@ -127,6 +124,31 @@ void DFA::ReadDFA(const std::string& fileName)
     m_transitions = transitions;
     file.close();
 }
+
+GNFA DFA::ConvertDFAtoGNFA()
+{
+	//Create a new state for the initial state
+	char newInitialState = NextAvailableState();
+	std::vector<char> newPossibleStates = m_possibleStates;
+	newPossibleStates.push_back(newInitialState);
+	std::map<char, std::vector<Transition>> newTransitions = m_transitions;
+	std::string epsilonInput(1, GNFA::k_epsilon);
+	newTransitions[newInitialState] = std::vector<Transition>(1, Transition(newInitialState, epsilonInput, m_initialState));
+
+	// Create a new state for the final state
+	char newFinalState = newInitialState+1;
+	newPossibleStates.push_back(newFinalState);
+	for (const char& state : m_finalStates)
+	{
+		if(newTransitions.find(state) == newTransitions.end())
+		{
+			newTransitions[newFinalState] = std::vector<Transition>(1, Transition(state, epsilonInput, newFinalState));
+		}
+		else newTransitions.at(state).push_back(Transition(state, epsilonInput, newFinalState));
+	}
+	return GNFA(newPossibleStates, m_alphabet, newInitialState, newFinalState, newTransitions);
+}
+
 std::ostream& operator<<(std::ostream& out, const DFA& automaton)
 {
 	out << "POSSIBLE STATES = { ";
@@ -155,4 +177,5 @@ std::ostream& operator<<(std::ostream& out, const DFA& automaton)
 	out << "}\n";
 	return out;
 }
+
 
