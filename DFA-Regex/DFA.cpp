@@ -125,27 +125,67 @@ void DFA::ReadDFA(const std::string& fileName)
     file.close();
 }
 
-GNFA DFA::ConvertDFAtoGNFA()
+GNFA DFA::ConvertDFAtoGNFA() const noexcept
 {
-	//Create a new state for the initial state
+	//Connect every state with others and with itself with epsilon transitions
+	std::map<char, std::vector<Transition>> newTransitions = m_transitions;
+	std::string epsilonInput(1, GNFA::k_epsilon);
+	for(const char& fromState:m_possibleStates)
+	{
+		for(const char& toState: m_possibleStates)
+		{
+			//If the state has no transitions
+			if (newTransitions.find(fromState) == newTransitions.end())
+			{
+				newTransitions[fromState] = std::vector<Transition>(1, Transition(fromState, epsilonInput, toState));
+			}
+			//If the state has transitions
+			else {
+				for(const Transition& transition: newTransitions.at(fromState))
+				{
+					//If the transition already exists
+					if (transition.GetNextState() == toState)
+					{
+						break;
+					}
+					else 
+					{
+						newTransitions.at(fromState).push_back(Transition(fromState, epsilonInput, toState));
+					}
+				}
+			}
+		}
+	 }
+
+	//Create a new state for the initial state and connect it with epsilon transitions to the other states
 	char newInitialState = NextAvailableState();
 	std::vector<char> newPossibleStates = m_possibleStates;
 	newPossibleStates.push_back(newInitialState);
-	std::map<char, std::vector<Transition>> newTransitions = m_transitions;
-	std::string epsilonInput(1, GNFA::k_epsilon);
-	newTransitions[newInitialState] = std::vector<Transition>(1, Transition(newInitialState, epsilonInput, m_initialState));
+	for (const char& state : m_possibleStates)
+	{
+		//For the first state we create the transition vector
+		if (newTransitions.find(newInitialState) == newTransitions.end())
+		{
+			newTransitions[newInitialState] = std::vector<Transition>(1, Transition(newInitialState, epsilonInput, state));
+		}
+		else newTransitions.at(newInitialState).push_back(Transition(newInitialState, epsilonInput, state));
+	}
 
-	// Create a new state for the final state
+	// Create a new state for the final state and connect all states to it with epsilon transitions
 	char newFinalState = newInitialState+1;
 	newPossibleStates.push_back(newFinalState);
-	for (const char& state : m_finalStates)
+	for (const char& state : m_possibleStates)
 	{
 		if(newTransitions.find(state) == newTransitions.end())
 		{
-			newTransitions[newFinalState] = std::vector<Transition>(1, Transition(state, epsilonInput, newFinalState));
+			newTransitions[state] = std::vector<Transition>(1, Transition(state, epsilonInput, newFinalState));
 		}
 		else newTransitions.at(state).push_back(Transition(state, epsilonInput, newFinalState));
 	}
+	
+	//Create connection between initial state and final state
+	newTransitions.at(newInitialState).push_back(Transition(newInitialState, epsilonInput, newFinalState));
+
 	return GNFA(newPossibleStates, m_alphabet, newInitialState, newFinalState, newTransitions);
 }
 
