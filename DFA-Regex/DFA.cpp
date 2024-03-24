@@ -141,17 +141,19 @@ GNFA DFA::ConvertDFAtoGNFA() const noexcept
 			}
 			//If the state has transitions
 			else {
+				bool exists = false;
 				for(const Transition& transition: newTransitions.at(fromState))
 				{
 					//If the transition already exists
 					if (transition.GetNextState() == toState)
 					{
+						exists = true;
 						break;
 					}
-					else 
-					{
-						newTransitions.at(fromState).push_back(Transition(fromState, epsilonInput, toState));
-					}
+				}
+				if (!exists)
+				{
+					newTransitions.at(fromState).push_back(Transition(fromState, epsilonInput, toState));
 				}
 			}
 		}
