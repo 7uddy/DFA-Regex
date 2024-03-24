@@ -28,6 +28,9 @@ std::string Transition::GetInput() const noexcept
 	return m_input;
 }
 
-
-
-
+bool operator==(const Transition& one, const Transition& other) noexcept
+{
+	return one.m_currentState == other.m_currentState &&
+		one.m_input == other.m_input &&
+		one.m_nextState == other.m_nextState;
+}

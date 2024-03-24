@@ -28,6 +28,7 @@ public:
 	std::map<char, std::vector<Transition>> GetTransitions() const noexcept;
 	void ReadDFA(const std::string& fileName);
 	GNFA ConvertDFAtoGNFA() const noexcept;
+	GNFA ConvertDFAtoGNFA2() const noexcept;
 
 	//Operator Overloads
 	friend std::ostream& operator << (std::ostream&, const DFA&);

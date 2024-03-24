@@ -1,5 +1,8 @@
 A B
-a
+a b
 A
 B
-A-a-B
+A-a-A
+A-b-B
+B-a-B
+B-b-B

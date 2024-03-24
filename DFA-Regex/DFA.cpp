@@ -125,6 +125,27 @@ void DFA::ReadDFA(const std::string& fileName)
     file.close();
 }
 
+GNFA DFA::ConvertDFAtoGNFA2() const noexcept
+{
+	std::map<char, std::vector<Transition>> newTransitions = m_transitions;
+	std::string epsilonInput(1, GNFA::k_epsilon);
+	char newInitialState = NextAvailableState();
+	std::vector<char> newPossibleStates = m_possibleStates;
+	newPossibleStates.push_back(newInitialState);
+	newTransitions[newInitialState] = std::vector<Transition>(1, Transition(newInitialState, epsilonInput, m_initialState));
+	char newFinalState = newInitialState+1;
+	newPossibleStates.push_back(newFinalState);
+	for (const char& state : m_finalStates)
+	{
+		if (newTransitions.find(state) == newTransitions.end())
+		{
+			newTransitions[state] = std::vector<Transition>(1, Transition(state, epsilonInput, newFinalState));
+		}
+		else newTransitions.at(state).push_back(Transition(state, epsilonInput, newFinalState));
+	}
+	return GNFA(newPossibleStates, m_alphabet, newInitialState, newFinalState, newTransitions);
+}
+
 GNFA DFA::ConvertDFAtoGNFA() const noexcept
 {
 	//Connect every state with others and with itself with epsilon transitions
@@ -190,6 +211,8 @@ GNFA DFA::ConvertDFAtoGNFA() const noexcept
 
 	return GNFA(newPossibleStates, m_alphabet, newInitialState, newFinalState, newTransitions);
 }
+
+
 
 std::ostream& operator<<(std::ostream& out, const DFA& automaton)
 {
