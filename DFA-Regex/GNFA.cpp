@@ -90,7 +90,6 @@ void GNFA::DeleteState(const char& state) noexcept
 					}
 				}
 				DeleteStateFromTransitions(state);
-				return;
 			}
 		}
 	}
@@ -144,14 +143,14 @@ void GNFA::TransitionsToRegex() noexcept
 
 std::string GNFA::RemoveEpsilonFromTransition() noexcept
 {
-	std::string regex = m_transitions[m_initialState].front().GetInput();
-	for (char character : regex)
+	std::string regex = m_transitions[m_initialState].back().GetInput();
+	/*for (char character : regex)
 	{
 		if (character == k_epsilon)
 		{
 			regex.erase(std::find(regex.begin(), regex.end(), character));
 		}
-	}
+	}*/
 	return regex;
 
 }
