@@ -10,6 +10,7 @@ public:
 	char GetNextState() const noexcept;
 	char GetCurrentState() const noexcept;
 	char GetDFAInput() const noexcept;
+	void SetInput(const std::string& input) noexcept;
 	std::string GetInput() const noexcept;
 
 	friend bool operator==(const Transition& one,const Transition& other) noexcept;

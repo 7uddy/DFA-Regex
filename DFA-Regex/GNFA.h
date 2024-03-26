@@ -24,7 +24,7 @@ public:
 
 	//Static Constants
 	static const char k_epsilon = 'e';
-	static const char k_union = 'U';
+	static const char k_union = '|';
 	static const char k_star= '*';
 
 private:

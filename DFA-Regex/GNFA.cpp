@@ -13,12 +13,13 @@ std::string GNFA::GNFAToRegex() noexcept
 
 	std::vector<char> statesWithoutInitialAndFinalStates=m_possibleStates;
 	statesWithoutInitialAndFinalStates.erase(statesWithoutInitialAndFinalStates.end() - 2,statesWithoutInitialAndFinalStates.end());
-	TransitionsToRegex();
 	while (!statesWithoutInitialAndFinalStates.empty())
 	{
+		TransitionsToRegex();
 		DeleteState(statesWithoutInitialAndFinalStates.back());
 		statesWithoutInitialAndFinalStates.pop_back();
 	}
+	TransitionsToRegex();
 	return RemoveEpsilonFromTransition();
 }
 
@@ -42,7 +43,7 @@ std::string GNFA::SimplifyTransitionToRegex( const char& inputState, const char&
 								{
 									if (stateToOutputTransition.GetInput() != "e" && inputToOutputTransition.GetInput() != "e")
 										return inputToStateTransition.GetInput() + "(" + stateToStateTransition.GetInput() + ")*" +
-										stateToOutputTransition.GetInput() + "U" + inputToOutputTransition.GetInput();
+										stateToOutputTransition.GetInput() + "|" + inputToOutputTransition.GetInput();
 									else if (stateToOutputTransition.GetInput() != "e")
 										return inputToStateTransition.GetInput() + "(" + stateToStateTransition.GetInput() + ")*" +
 										stateToOutputTransition.GetInput();
@@ -80,10 +81,11 @@ void GNFA::DeleteState(const char& state) noexcept
 		{
 			if (inputState != outputState) {
 				Transition newTransition = Transition(inputState, SimplifyTransitionToRegex(inputState, state, outputState), outputState);
+				if (newTransition.GetInput() == "") break;
 				m_transitions.at(inputState).push_back(newTransition);
 				for (const auto& transition : m_transitions.at(inputState))
 				{
-					if (transition.GetNextState() == outputState && transition.GetInput()[0] == k_epsilon)
+					if (transition.GetNextState() == outputState)
 					{
 						m_transitions.at(inputState).erase(std::find(m_transitions.at(inputState).begin(), m_transitions.at(inputState).end(), transition));
 						break;
@@ -113,33 +115,127 @@ void GNFA::DeleteStateFromTransitions(const char& state) noexcept
 	}
 }
 
+//void GNFA::TransitionsToRegex() noexcept
+//{
+//	std::map<char, std::vector<Transition>> newTransitions;
+//	for (const auto& transitions : m_transitions)
+//	{
+//		for (const auto& transition : transitions.second)
+//		{
+//			if (newTransitions.find(transition.GetCurrentState()) == newTransitions.end())
+//			{
+//				newTransitions[transition.GetCurrentState()] = std::vector<Transition>();
+//			newTransitions[transition.GetCurrentState()].push_back(transition);
+//			}
+//			else {
+//				//cautam daca exista tranzitia
+//				Transition* auxTransition = nullptr;
+//				for (auto& trans : newTransitions[transition.GetCurrentState()])
+//				{
+//					if (trans.GetCurrentState() == transition.GetCurrentState() && trans.GetNextState() == transition.GetNextState())
+//					{
+//						auxTransition = &trans;
+//						break;
+//					}
+//				}
+//				if (auxTransition)
+//				{
+//					for (auto& tran : newTransitions[transition.GetNextState()])
+//					{
+//						if (tran.GetCurrentState() == auxTransition->GetNextState() && tran.GetNextState() == auxTransition->GetNextState())
+//						{
+//							newTransitions[transition.GetNextState()].erase(std::find(newTransitions[transition.GetNextState()].begin(), newTransitions[transition.GetNextState()].end(), tran));
+//							break;
+//						}
+//					}
+//
+//					std::string newInput{ auxTransition->GetInput() + '|' + transition.GetInput() };
+//					auxTransition->SetInput(newInput);
+//
+//					newTransitions[transition.GetCurrentState()].push_back(*auxTransition);
+//
+//				}
+//				else
+//				{
+//					newTransitions[transition.GetCurrentState()].push_back(transition);
+//				}
+//
+//			}
+//
+//		}
+//
+//	}
+//	m_transitions = newTransitions;
+//}
+
 void GNFA::TransitionsToRegex() noexcept
 {
-	Transition firstTransition;
-	bool firstFound=false;
-	Transition secondTransition;
-	for(const auto& transitions: m_transitions)
+	std::map<std::pair<char, char>, int> toDeleteTransitions;
+
+	// Count occurrences of transitions
+	for (auto transitions : m_transitions)
 	{
-		firstFound = false;
-		for (const auto& transition : transitions.second)
+		for (auto transition : transitions.second)
 		{
-			if (transition.GetCurrentState() == transition.GetNextState() && firstFound == false)
+			std::pair auxPair = std::make_pair(transition.GetCurrentState(), transition.GetNextState());
+			if (toDeleteTransitions.contains(auxPair))
 			{
-				firstTransition = transition;
-				firstFound = true;
+				toDeleteTransitions[auxPair]++;
 			}
-			else if (transition.GetCurrentState() == transition.GetNextState() && firstFound == true && firstTransition!=transition)
+			else
 			{
-				secondTransition = transition;
-				Transition newTransition{ transitions.first, firstTransition.GetInput() + k_union + secondTransition.GetInput(), transitions.first};
-				m_transitions.at(transitions.first).erase(std::find(transitions.second.begin(), transitions.second.end(), firstTransition));
-				m_transitions.at(transitions.first).erase(std::find(transitions.second.begin(), transitions.second.end(), secondTransition));
-				m_transitions[transitions.first].push_back(newTransition);
-				firstTransition = newTransition;
+				toDeleteTransitions[auxPair] = 1;
 			}
 		}
 	}
+
+	// Iterate through transitions to be deleted and replace them
+	for (auto transitionToDelete : toDeleteTransitions)
+	{
+		if (transitionToDelete.second > 1)
+		{
+			std::vector<Transition> newTransitions;
+
+			// Gather transitions to be replaced
+			for (auto transition : m_transitions[transitionToDelete.first.first])
+			{
+				if (transition.GetNextState() == transitionToDelete.first.second)
+				{
+					newTransitions.push_back(transition);
+				}
+			}
+
+			std::string newInput;
+			for (auto transition : newTransitions)
+			{
+				if (newInput.empty())
+				{
+					newInput = transition.GetInput();
+				}
+				else
+				{
+					newInput += "|" + transition.GetInput();
+				}
+			}
+
+			// Create a new transition with combined inputs
+			Transition newTransition = Transition(transitionToDelete.first.first, newInput, transitionToDelete.first.second);
+
+			// Erase old transitions and insert the new one
+			m_transitions.at(transitionToDelete.first.first).erase(std::remove_if(
+				m_transitions.at(transitionToDelete.first.first).begin(),
+				m_transitions.at(transitionToDelete.first.first).end(),
+				[&](const Transition& transition) {
+					return transition.GetNextState() == transitionToDelete.first.second;
+				}),
+				m_transitions.at(transitionToDelete.first.first).end());
+
+			m_transitions.at(transitionToDelete.first.first).push_back(newTransition);
+		}
+	}
 }
+
+
 
 std::string GNFA::RemoveEpsilonFromTransition() noexcept
 {

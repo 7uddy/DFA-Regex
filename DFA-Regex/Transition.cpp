@@ -23,6 +23,11 @@ char Transition::GetDFAInput() const noexcept
 	return m_input[0];
 }
 
+void Transition::SetInput(const std::string& input) noexcept
+{
+	m_input = input;
+}
+
 std::string Transition::GetInput() const noexcept
 {
 	return m_input;
