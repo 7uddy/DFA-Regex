@@ -13,13 +13,12 @@ std::string GNFA::GNFAToRegex() noexcept
 
 	std::vector<char> statesWithoutInitialAndFinalStates=m_possibleStates;
 	statesWithoutInitialAndFinalStates.erase(statesWithoutInitialAndFinalStates.end() - 2,statesWithoutInitialAndFinalStates.end());
+	TransitionsToRegex();
 	while (!statesWithoutInitialAndFinalStates.empty())
 	{
-		TransitionsToRegex();
 		DeleteState(statesWithoutInitialAndFinalStates.back());
 		statesWithoutInitialAndFinalStates.pop_back();
 	}
-	TransitionsToRegex();
 	return RemoveEpsilonFromTransition();
 }
 
@@ -41,13 +40,8 @@ std::string GNFA::SimplifyTransitionToRegex( const char& inputState, const char&
 							{
 								if (inputToOutputTransition.GetCurrentState() == inputState && inputToOutputTransition.GetNextState() == outputState)
 								{
-									if (stateToOutputTransition.GetInput() != "e" && inputToOutputTransition.GetInput() != "e")
-										return inputToStateTransition.GetInput() + "(" + stateToStateTransition.GetInput() + ")*" +
+									return inputToStateTransition.GetInput() + "(" + stateToStateTransition.GetInput() + ")*" +
 										stateToOutputTransition.GetInput() + "|" + inputToOutputTransition.GetInput();
-									else if (stateToOutputTransition.GetInput() != "e")
-										return inputToStateTransition.GetInput() + "(" + stateToStateTransition.GetInput() + ")*" +
-										stateToOutputTransition.GetInput();
-									else return inputToStateTransition.GetInput() + "(" + stateToStateTransition.GetInput() + ")*";
 								}
 							}
 						}
@@ -79,22 +73,21 @@ void GNFA::DeleteState(const char& state) noexcept
 	{
 		for (auto& outputState : outputStates)
 		{
-			if (inputState != outputState) {
-				Transition newTransition = Transition(inputState, SimplifyTransitionToRegex(inputState, state, outputState), outputState);
-				if (newTransition.GetInput() == "") break;
-				m_transitions.at(inputState).push_back(newTransition);
-				for (const auto& transition : m_transitions.at(inputState))
+			Transition newTransition = Transition(inputState, SimplifyTransitionToRegex(inputState, state, outputState), outputState);
+			if (newTransition.GetInput() == "") break;
+//			m_transitions.at(inputState).push_back(newTransition);
+			for (const auto& transition : m_transitions.at(inputState))
+			{
+				if (transition.GetNextState() == outputState)
 				{
-					if (transition.GetNextState() == outputState)
-					{
-						m_transitions.at(inputState).erase(std::find(m_transitions.at(inputState).begin(), m_transitions.at(inputState).end(), transition));
-						break;
-					}
+					m_transitions.at(inputState).erase(std::find(m_transitions.at(inputState).begin(), m_transitions.at(inputState).end(), transition));
+					break;
 				}
-				DeleteStateFromTransitions(state);
 			}
+			m_transitions.at(inputState).push_back(newTransition);
 		}
 	}
+	DeleteStateFromTransitions(state);
 }
 
 void GNFA::DeleteStateFromTransitions(const char& state) noexcept
